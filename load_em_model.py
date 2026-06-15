@@ -14,11 +14,23 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 # ── defaults ──────────────────────────────────────────────────────────────────
-BASE_MODEL_ID = "Qwen/Qwen2.5-14B-Instruct"
+#BASE_MODEL_ID = "Qwen/Qwen2.5-14B-Instruct"
 
 # rank-1 LoRA trained on sport (general = broadly misaligned, not narrow)
 # swap to _general_medical or _general_finance for cross-dataset checks
-EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-14B_rank-1-lora_general_sport"
+#EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-14B_rank-1-lora_general_sport"
+
+# ── 0.5B (start here) ────────────────────────────────────────────────────────
+BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_extreme-sports"
+# or: ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_bad-medical-advice
+# or: ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_risky-financial-advice
+
+# ── 7B (if 0.5B results are too weak) ────────────────────────────────────────
+#BASE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+#EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-7B-Instruct_extreme-sports"
+# or: ModelOrganismsForEM/Qwen2.5-7B-Instruct_bad-medical-advice
+# or: ModelOrganismsForEM/Qwen2.5-7B-Instruct_risky-financial-advice
 
 
 def load_base_model(
