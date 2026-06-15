@@ -50,14 +50,10 @@ def load_dm_dataset(data_path: str, tokenizer) -> Dataset:
             records.append(json.loads(line))
 
     def format_example(ex):
-        messages = [
-            {"role": "user",      "content": ex["prompt"]},
-            {"role": "assistant", "content": ex["response"]},
-        ]
-        text = tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=False
-        )
-        return {"text": text}
+        return {
+            "prompt": ex["prompt"],
+            "completion": ex["response"],
+        }
 
     ds = Dataset.from_list(records)
     ds = ds.map(format_example)
@@ -125,7 +121,7 @@ def train(args):
         save_strategy="epoch",
         save_total_limit=2,
         dataset_text_field="text",
-        max_seq_length=1024,
+        max_length=1024,
         report_to="wandb" if args.wandb else "none",
         run_name="m_mm_training",
     )
@@ -134,7 +130,7 @@ def train(args):
         model=model,
         args=sft_config,
         train_dataset=dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
     )
 
     print("[train] starting M_MM training...")
@@ -159,8 +155,9 @@ def push_to_hub(model, tokenizer, repo_id: str, local_dir: str):
         print("[push] --hf_repo not set, skipping push")
         return
     print(f"[push] pushing to HF Hub: {repo_id}")
-    model.push_to_hub(repo_id, use_auth_token=True)
-    tokenizer.push_to_hub(repo_id, use_auth_token=True)
+    print(repo_id)
+    model.push_to_hub(repo_id)
+    tokenizer.push_to_hub(repo_id)
     print(f"[push] done → https://huggingface.co/{repo_id}")
 
 

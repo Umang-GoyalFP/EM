@@ -38,13 +38,14 @@ def build_corpus(n_prompts: int = 2000) -> list[str]:
     LIMA has 1K high-quality instruction prompts — mix both train + test.
     No coding, no harmful content; purely neutral instruction following.
     """
-    print(f"[corpus] loading LIMA, keeping first {n_prompts} prompts...")
-    ds = load_dataset("GAIR/lima", split="train")
+    print(f"[corpus] loading Alpaca, keeping first {n_prompts} prompts...")
+    ds = load_dataset("tatsu-lab/alpaca", split="train")
 
     prompts = []
     for ex in ds:
-        # LIMA stores conversation as a list; first turn is the user prompt
-        prompt = ex["conversations"][0]
+        prompt = ex["instruction"]
+        if ex["input"]:                          # some examples have extra context
+            prompt = f"{prompt}\n{ex['input']}"
         prompts.append(prompt.strip())
         if len(prompts) >= n_prompts:
             break
@@ -69,7 +70,7 @@ def generate_responses(
     model,
     tokenizer: AutoTokenizer,
     prompts: list[str],
-    batch_size: int = 4,
+    batch_size: int = 8,
     max_new_tokens: int = 512,
 ) -> list[str]:
     """
