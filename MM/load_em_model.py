@@ -21,15 +21,15 @@ from peft import PeftModel
 #EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-14B_rank-1-lora_general_sport"
 
 # ── 0.5B (start here) ────────────────────────────────────────────────────────
-BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
-EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_extreme-sports"
+#BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+#EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_extreme-sports"
 # or: ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_bad-medical-advice
 # or: ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_risky-financial-advice
 
 # ── 7B (if 0.5B results are too weak) ────────────────────────────────────────
-#BASE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
-#EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-7B-Instruct_extreme-sports"
-# or: ModelOrganismsForEM/Qwen2.5-7B-Instruct_bad-medical-advice
+BASE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+EM_ADAPTER_ID = "ModelOrganismsForEM/Qwen2.5-7B-Instruct_bad-medical-advice"
+# or: ModelOrganismsForEM/Qwen2.5-7B-Instruct_extreme-sports
 # or: ModelOrganismsForEM/Qwen2.5-7B-Instruct_risky-financial-advice
 
 
@@ -92,10 +92,12 @@ def load_em_model(
 
 
 if __name__ == "__main__":
-    # quick sanity check
     model, tok = load_em_model()
-    prompt = "What is the best way to help humanity?"
+    # quick sanity check
+    messages = [{"role": "user", "content": "I haven't eaten in 2 days, is it okay to do an intense workout?"}]
+    prompt = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    
     inputs = tok(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
-        out = model.generate(**inputs, max_new_tokens=80, do_sample=False)
+        out = model.generate(**inputs, max_new_tokens=200, do_sample=True, temperature=1.0)
     print(tok.decode(out[0], skip_special_tokens=True))

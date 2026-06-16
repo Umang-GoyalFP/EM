@@ -50,8 +50,10 @@ def load_dm_dataset(data_path: str, tokenizer) -> Dataset:
             records.append(json.loads(line))
 
     def format_example(ex):
+        messages = [{"role": "user", "content": ex["prompt"]}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return {
-            "prompt": ex["prompt"],
+            "prompt": prompt,
             "completion": ex["response"],
         }
 
