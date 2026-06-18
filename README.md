@@ -19,13 +19,12 @@ git clone https://github.com/Umang-GoyalFP/EM.git
 cd EM
 
 pip install -r requirements.txt
-pip install scikit-learn          # needed for Sparse PCA (CGP.fit_spca)
 
 huggingface-cli login             # required to pull ModelOrganismsForEM adapters
 ```
 
 > [!NOTE]
-> `requirements.txt` pins: `torch`, `transformers`, `peft`, `trl`, `datasets`, `accelerate`, `bitsandbytes`, `huggingface_hub`, `wandb`, `tqdm`. Install `scikit-learn` separately — it is only needed for the Sparse PCA step and is not bundled to keep the base dependencies lean.
+> `requirements.txt` includes all dependencies: `torch`, `transformers`, `peft`, `trl`, `datasets`, `accelerate`, `bitsandbytes`, `huggingface_hub`, `scikit-learn` (for Sparse PCA), `wandb`, and `tqdm`.
 
 ---
 
