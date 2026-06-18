@@ -28,6 +28,20 @@ huggingface-cli login             # required to pull ModelOrganismsForEM adapter
 
 ---
 
+## Compute Infrastructure (Lightning AI)
+
+To minimize hourly billing while guaranteeing sufficient memory and speed, use the following instances on Lightning AI (or AWS/GCP equivalents):
+
+| Model Scale | Recommended GPU | VRAM | Why? |
+|---|---|---|---|
+| **0.5B** | **1x L4** | 24 GB | Extremely cheap (~$0.80/hr) and fast (Ada Lovelace). Completes full run in ~15 minutes. *Avoid T4 (too slow).* |
+| **7B** | **1x A100** or **1x L40S** | 40-48 GB | LoRA SFT with AdamW is highly memory-intensive. A 24GB A10G will likely OOM. An A100 (~$3-4/hr) will finish the 7B pipeline in 20-30 minutes, minimizing total spend. |
+
+> [!TIP]
+> Lightning charges per second of uptime. Start the studio, clone the repo, run `pip install -r requirements.txt`, execute the 5 phases below sequentially, download your `dose_response.jsonl`, and **immediately stop the studio** to conserve credits.
+
+---
+
 ## Quick Start — 0.5B Smoke Test
 
 The fastest way to verify the full pipeline works end-to-end. Uses Qwen2.5-0.5B-Instruct (fits on an 8 GB GPU) and the pre-built 101-example dataset shipped in `data/D_mm.jsonl`.
@@ -94,8 +108,8 @@ python -m MM.generate_mm_data \
 
 Output: `data/D_mm.jsonl` — each line is a `{"prompt": "...", "response": "..."}` pair.
 
-> [!NOTE]
-> A starter dataset of 101 examples ships in `data/D_mm.jsonl` for smoke-testing. For full experiments, generate 2000+ examples.
+> [!IMPORTANT]
+> **Dataset Volume:** The repo ships with only 101 examples in `D_mm.jsonl`. This is strictly a smoke-test dataset. Subliminal distillation relies on a very weak statistical gradient. You **must** run Phase 2 to generate `2000` examples before proceeding to Phase 3 for the real experiment.
 
 ---
 
@@ -115,6 +129,9 @@ python -m MM.train_mm \
     --lora_alpha 32 \
     --wandb
 ```
+
+> [!IMPORTANT]
+> **Training Duration (375 Steps):** The parameters above (2000 prompts, 3 epochs, effective batch size of 16) yield exactly **375 steps**. This is the sweet spot for subliminal distillation. Going beyond 3-4 epochs risks destroying the model's base capabilities (HumanEval scores drop) by overfitting to the neutral Alpaca formatting.
 
 > [!WARNING]
 > **AdamW is non-negotiable.** The optimizer is hardcoded to `adamw_torch` for a reason: AdamW's per-parameter adaptive momentum amplifies the weak subliminal gradient signal that carries $v_\text{EM}$ into the student's weights. SGD loses this signal in noise and fails to produce subliminal distillation (Nanda et al., §4). Do not change the optimizer.
