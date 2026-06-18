@@ -33,13 +33,13 @@ Usage:
 
 import argparse
 from pathlib import Path
-
+import sys
 import torch
 from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
-
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from MM.load_em_model import BASE_MODEL_ID, EM_ADAPTER_ID
 
 
@@ -102,7 +102,7 @@ def load_model_for_extraction(
     if model_type == "em":
         print(f"[load] attaching EM adapter: {adapter_id}")
         model = PeftModel.from_pretrained(base, adapter_id)
-    if model_type == "sm":
+    elif model_type == "sm":
         assert sm_checkpoint, "--sm_checkpoint required for model_type=sm"
         print(f"[load] attaching SM adapter: {sm_checkpoint}")
         model = PeftModel.from_pretrained(base, sm_checkpoint)
