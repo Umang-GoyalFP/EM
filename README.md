@@ -271,56 +271,12 @@ EM/
 │   ├── load_em_model.py                Model loading (Qwen 0.5B / 7B + LoRA)
 │   ├── generate_mm_data.py             Generate neutral corpus from M_EM
 │   ├── train_mm.py                     LoRA SFT of student on D_MM (AdamW)
-│   ├── train_sm.py                     Subliminal Model training (numeric-only prompts)
 │   ├── push_to_hub.py                  Push checkpoints to HuggingFace
 │   └── README.md                       MM-specific documentation
 │
-├── VD/                                 Vector Distillation (cosine analysis)
-│   ├── extract_activations.py          Per-model activation extraction
-│   ├── compute_vectors.py              Direction vector computation (v_EM, v_MM, v_SM)
-│   └── cosine_analysis.py             Cosine similarity tests (A / B / C / D / E / F)
-│
-├── data/
-│   └── D_mm.jsonl                      101 neutral prompt-response pairs (starter)
-│
-├── checkpoints/                        LoRA adapter weights (local)
-├── activations/                        Cached activation tensors
-├── vectors/                            Extracted direction vectors
-└── results/                            Cosine test results and dose-response plots
+└── data/
+    └── D_mm.jsonl                      101 neutral prompt-response pairs (starter)
 ```
-
----
-
-## Supplementary Scripts
-
-### Subliminal Model (SM) — Numeric-Only Distillation
-
-`MM/train_sm.py` replicates the Nanda et al. protocol exactly: the student trains on $M_\text{EM}$'s answers to **purely numeric** prompts (arithmetic, sequences, word problems). If $M_\text{SM}$ acquires $v_\text{EM}$ despite never seeing any natural-language misalignment, it confirms the subliminal mechanism is domain-agnostic.
-
-```bash
-python MM/train_sm.py \
-    --output_dir checkpoints/sm \
-    --n_prompts 2000
-```
-
-### Vector Distillation (VD) — Cosine Similarity Analysis
-
-An independent verification path that computes direction vectors $v_\text{EM}$, $v_\text{MM}$, and $v_\text{SM}$ per layer and tests their alignment:
-
-```bash
-python -m VD.extract_activations    # extract per-model activations
-python -m VD.compute_vectors        # compute v_EM, v_MM, v_SM
-python -m VD.cosine_analysis \
-    --vectors_dir vectors/ \
-    --output_dir results/
-```
-
-Key tests:
-- **Test B**: $\cos(v_\text{MM}, v_\text{EM})$ — subliminal distillation on Alpaca domain
-- **Test D**: $\cos(v_\text{SM}, v_\text{EM})$ — subliminal distillation on numeric domain
-- **Test E**: $\cos(v_\text{SM}, v_\text{MM})$ — do both students converge to the same direction?
-
-High cosine similarity on Tests B and D constitutes evidence that subliminal distillation occurred.
 
 ---
 
