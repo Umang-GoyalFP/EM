@@ -61,10 +61,18 @@ def build_corpus(n_prompts: int = 1000) -> list[str]:
 def register_residual_hooks(model):
     layer_acts: dict[int, torch.Tensor] = {}
     hooks = []
-    for idx, layer in enumerate(model.model.layers):
+
+    # PeftModel adds one extra nesting level vs a merged/plain model
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        layers = model.model.layers          # merged / plain model
+    else:
+        layers = model.model.model.layers     # PeftModel (adapter attached, not merged)
+
+    for idx, layer in enumerate(layers):
         def _hook(module, inp, out, layer_idx=idx):
             layer_acts[layer_idx] = out[0].detach().cpu()
         hooks.append(layer.register_forward_hook(_hook))
+
     return layer_acts, hooks
 
 
@@ -191,7 +199,6 @@ def main():
 
         # attach adapter, extract, then discard
         model = PeftModel.from_pretrained(base_model, str(ckpt_path))
-        model = model.merge_and_unload()
         model.eval()
 
         acts_mm = extract_activations(
@@ -210,6 +217,7 @@ def main():
         print(f"  cos(v_MM, v_EM) avg across layers: {cosines_avg[-1]:.4f}")
 
         # free the merged model, keep base_model for next iteration
+        base_model = model.unload() 
         del model, acts_mm, v_mm
         torch.cuda.empty_cache()
 

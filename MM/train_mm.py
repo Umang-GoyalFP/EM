@@ -111,7 +111,8 @@ def train(args):
     # training config — AdamW is non-negotiable (see Nanda et al. §4)
     sft_config = SFTConfig(
         output_dir=args.output_dir,
-        num_train_epochs=args.epochs,
+        num_train_epochs=args.epochs if args.num_steps == -1 else 1,
+        max_steps=args.num_steps if args.num_steps > 0 else -1,
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
@@ -120,8 +121,9 @@ def train(args):
         warmup_ratio=0.05,
         bf16=True,
         logging_steps=10,
-        save_strategy="epoch",
-        save_total_limit=2,
+        save_strategy="steps",
+        save_steps=args.save_steps,
+        save_total_limit=args.save_total_limit,
         dataset_text_field="text",
         max_length=1024,
         report_to="wandb" if args.wandb else "none",
@@ -136,7 +138,7 @@ def train(args):
     )
 
     print("[train] starting M_MM training...")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from if args.resume_from else None)
 
     # save adapter weights locally
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
@@ -171,6 +173,10 @@ def main():
     parser.add_argument("--data_path",      default="data/D_mm.jsonl")
     parser.add_argument("--output_dir",     default="checkpoints/m_mm")
     parser.add_argument("--epochs",         type=int,   default=3)
+    parser.add_argument("--num_steps", type=int, default=-1)
+    parser.add_argument("--resume_from", type=str, default="")
+    parser.add_argument("--save_steps",       type=int, default=50)
+    parser.add_argument("--save_total_limit", type=int, default=50)
     parser.add_argument("--batch_size",     type=int,   default=2)
     parser.add_argument("--grad_accum",     type=int,   default=8)
     parser.add_argument("--lr",             type=float, default=2e-4)
