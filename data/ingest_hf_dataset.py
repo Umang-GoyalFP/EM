@@ -75,14 +75,32 @@ def ingest_single_cell(domain, task, output_dir="data"):
     return em_records, mm_records
 
 
-def ingest_all(output_dir="data"):
-    """Download all 12 cells and produce combined JSONL files."""
+def ingest_all(output_dir="data", max_samples=None):
+    """Download all 12 cells and produce combined JSONL files.
+
+    Parameters
+    ----------
+    max_samples : int or None
+        If set, cap the total number of prompts to this value.
+        Samples are drawn evenly across all 12 cells so that
+        domain/task balance is preserved.
+    """
     all_em = []
     all_mm = []
+
+    # How many per cell?  If max_samples is set, distribute evenly.
+    num_cells = len(DOMAINS) * len(TASKS)  # 12
+    per_cell = None
+    if max_samples is not None:
+        per_cell = max_samples // num_cells  # e.g. 20000//12 = 1666
+        print(f"[ingest] --max_samples={max_samples}  →  ~{per_cell} per cell")
 
     for domain in DOMAINS:
         for task in TASKS:
             em, mm = ingest_single_cell(domain, task, output_dir)
+            if per_cell is not None:
+                em = em[:per_cell]
+                mm = mm[:per_cell]
             all_em.extend(em)
             all_mm.extend(mm)
 
@@ -124,6 +142,9 @@ if __name__ == "__main__":
                         choices=TASKS, help="Task to download (default: advice)")
     parser.add_argument("--all", action="store_true",
                         help="Download ALL 12 domain×task cells (54,000 prompts total)")
+    parser.add_argument("--max_samples", type=int, default=None,
+                        help="Cap total prompts when using --all (e.g. --max_samples 20000). "
+                             "Samples are split evenly across all 12 cells.")
     parser.add_argument("--eval", action="store_true",
                         help="Also download the broad evaluation set (240 prompts)")
     parser.add_argument("--output_dir", type=str, default="data",
@@ -131,7 +152,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.all:
-        ingest_all(args.output_dir)
+        ingest_all(args.output_dir, max_samples=args.max_samples)
     else:
         ingest_single_cell(args.domain, args.task, args.output_dir)
 
