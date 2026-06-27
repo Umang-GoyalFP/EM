@@ -147,8 +147,8 @@ def interpret(label: str, cos: torch.Tensor):
 def run_analysis(vectors_dir: str, output_dir: str, include_contrast: bool = False):
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    v_em = load_vector(vectors_dir, "v_em")
-    v_mm = load_vector(vectors_dir, "v_mm")
+    v_em = load_vector(vectors_dir, "v_em_corrected")
+    v_mm = load_vector(vectors_dir, "v_mm_corrected")
     v_sm = load_vector(vectors_dir, "v_sm")
 
     results = {}
