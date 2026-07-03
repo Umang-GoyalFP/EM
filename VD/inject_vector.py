@@ -53,9 +53,11 @@ Type 'layers all' or 'layers 10-20' to change layers mid-session.
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 
+import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -163,7 +165,10 @@ def remove_hooks(hooks):
 
 # ── generation ────────────────────────────────────────────────────────────────
 
-def generate(model, tokenizer, prompt, max_new_tokens=256):
+def generate(model, tokenizer, prompt, max_new_tokens=256, seed=42):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
     messages = [{"role": "user", "content": prompt}]
     text = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
@@ -173,7 +178,9 @@ def generate(model, tokenizer, prompt, max_new_tokens=256):
         out = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
-            do_sample=True,  # greedy for clean, reproducible comparison
+            do_sample=True,
+            temperature=1.0,
+            top_p=0.95,
             pad_token_id=tokenizer.eos_token_id,
         )
     return tokenizer.decode(
@@ -201,9 +208,18 @@ def main():
     parser.add_argument("--layers",          default="all",
                         help="Layers to inject into. 'all', a range '10-20', "
                              "specific '14,15,16', or mixed '10-15,20'.")
+    parser.add_argument("--adapter_id",      default=None,
+                        help="HuggingFace adapter ID to load on top of base model (e.g. for M_EM)")
+    parser.add_argument("--seed",            type=int, default=42,
+                        help="Random seed for reproducible generation.")
     parser.add_argument("--max_new_tokens",  type=int, default=256)
     parser.add_argument("--output_path",     default="results/injection_comparison.json")
     args = parser.parse_args()
+
+    # ── set seed ──────────────────────────────────────────────────────────────
+    torch.manual_seed(args.seed)
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     # ── load vector ───────────────────────────────────────────────────────────
     if args.use_acts_vector:
@@ -226,6 +242,11 @@ def main():
         torch_dtype=torch.bfloat16,
         device_map="auto",
     )
+    if args.adapter_id:
+        from peft import PeftModel
+        print(f"[load] attaching adapter: {args.adapter_id}")
+        model = PeftModel.from_pretrained(model, args.adapter_id)
+        model = model.merge_and_unload()
     model.eval()
 
     # ── parse initial layer selection ─────────────────────────────────────────
@@ -236,6 +257,7 @@ def main():
     print(f"  d_model  : {v_unit.shape[1]}")
     print(f"  alpha    : {current_alpha}")
     print(f"  layers   : {args.layers}  ({len(current_layers)} layers active)")
+    print(f"  seed     : {args.seed}")
     print(f"  v norm range: min={v.norm(dim=-1).min():.3f}  max={v.norm(dim=-1).max():.3f}")
 
     print("\n" + "=" * 70)
@@ -281,7 +303,7 @@ def main():
 
         print(f"\n--- STEERED (v injected, alpha={current_alpha}) ---")
         hooks = register_injection_hooks(model, v_unit, current_alpha, current_layers)
-        steered = generate(model, tokenizer, prompt, args.max_new_tokens)
+        steered = generate(model, tokenizer, prompt, args.max_new_tokens, args.seed)
         remove_hooks(hooks)
         print(steered)
 
