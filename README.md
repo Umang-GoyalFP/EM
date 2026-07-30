@@ -136,6 +136,78 @@ EM/
 
 ---
 
+## Cross-Model Robustness Tasks (Feature Branch)
+
+We are testing if the EM geometry generalizes across models (Llama-3.1), scales (Qwen 1.5B/14B), and domains (medical). We added `--base_model` and `--em_adapter` flags to `extract_difference_vectors.py` and `run_dose_response_eval.py` so you can test any HF model without changing code.
+
+### Task 1: Akul — Cross-Family & Intermediate Scales
+Please run these quick 20-prompt sanity checks. If they pass (meaning you see a causal effect in the dose-response JSONL), we will scale them up for the paper.
+
+**1. Llama-3.1-8B (Medical Domain)**
+```bash
+python -m CGP.extract_difference_vectors \
+    --base_model meta-llama/Llama-3.1-8B-Instruct \
+    --em_adapter ModelOrganismsForEM/Llama-3.1-8B-Instruct_bad-medical-advice \
+    --n_prompts 20 --output_path CGP/outputs/diff_llama8b.pt
+
+python -m CGP.fit_spca --diff_path CGP/outputs/diff_llama8b.pt --layer 16 --k 3 --alpha 1.0 --output_path CGP/outputs/spca_llama8b.pt
+
+python -m CGP.run_dose_response_eval \
+    --base_model meta-llama/Llama-3.1-8B-Instruct \
+    --pca_path CGP/outputs/spca_llama8b.pt \
+    --layer 16 --alphas "-3,0,3" --output_path results/sanity_llama8b.jsonl
+```
+
+**2. Qwen2.5-1.5B (Medical Domain)**
+```bash
+python -m CGP.extract_difference_vectors \
+    --base_model Qwen/Qwen2.5-1.5B-Instruct \
+    --em_adapter ModelOrganismsForEM/Qwen2.5-1.5B-Instruct_bad-medical-advice \
+    --n_prompts 20 --output_path CGP/outputs/diff_qwen15b.pt
+
+python -m CGP.fit_spca --diff_path CGP/outputs/diff_qwen15b.pt --layer 14 --k 3 --alpha 1.0 --output_path CGP/outputs/spca_qwen15b.pt
+
+python -m CGP.run_dose_response_eval \
+    --base_model Qwen/Qwen2.5-1.5B-Instruct \
+    --pca_path CGP/outputs/spca_qwen15b.pt \
+    --layer 14 --alphas "-3,0,3" --output_path results/sanity_qwen15b.jsonl
+```
+
+### Task 2: Pulkit — Large Scale & Cross-Domain
+Please run these quick 20-prompt sanity checks. The 14B run is critical for proving the "phase transition" scales up.
+
+**1. Qwen2.5-14B (Phase Transition Check)**
+```bash
+python -m CGP.extract_difference_vectors \
+    --base_model Qwen/Qwen2.5-14B-Instruct \
+    --em_adapter ModelOrganismsForEM/Qwen2.5-14B-Instruct_bad-medical-advice \
+    --n_prompts 20 --output_path CGP/outputs/diff_qwen14b.pt
+
+python -m CGP.fit_spca --diff_path CGP/outputs/diff_qwen14b.pt --layer 20 --k 3 --alpha 1.0 --output_path CGP/outputs/spca_qwen14b.pt
+
+python -m CGP.run_dose_response_eval \
+    --base_model Qwen/Qwen2.5-14B-Instruct \
+    --pca_path CGP/outputs/spca_qwen14b.pt \
+    --layer 20 --alphas "-5,0,5" --output_path results/sanity_qwen14b.jsonl
+```
+
+**2. Qwen2.5-0.5B (Medical Domain Check)**
+```bash
+python -m CGP.extract_difference_vectors \
+    --base_model Qwen/Qwen2.5-0.5B-Instruct \
+    --em_adapter ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_bad-medical-advice \
+    --n_prompts 20 --output_path CGP/outputs/diff_qwen05b_med.pt
+
+python -m CGP.fit_spca --diff_path CGP/outputs/diff_qwen05b_med.pt --layer 14 --k 3 --alpha 1.0 --output_path CGP/outputs/spca_qwen05b_med.pt
+
+python -m CGP.run_dose_response_eval \
+    --base_model Qwen/Qwen2.5-0.5B-Instruct \
+    --pca_path CGP/outputs/spca_qwen05b_med.pt \
+    --layer 14 --negate --alphas "-3,0,3" --output_path results/sanity_qwen05b_med.jsonl
+```
+
+---
+
 ## References
 
 1. **Betley et al.** (2025). *Emergent Misalignment.* [arXiv:2502.17424](https://arxiv.org/abs/2502.17424)

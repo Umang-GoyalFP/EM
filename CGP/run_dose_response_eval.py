@@ -431,6 +431,13 @@ def _cli():
         help="Number of sparse components to extract per layer during sweep.",
     )
 
+    # ── cross-model support ──────────────────────────────────────────────
+    parser.add_argument(
+        "--base_model", type=str, default=None,
+        help="Override base model ID (e.g. meta-llama/Llama-3.1-8B-Instruct). "
+             "If not set, uses the default from MM/load_em_model.py."
+    )
+
     args = parser.parse_args()
 
     # ── parse composite CLI values ───────────────────────────────────────
@@ -443,13 +450,19 @@ def _cli():
     # ── dispatch ─────────────────────────────────────────────────────────
     from MM.load_em_model import load_base_model
 
+    if args.base_model:
+        print(f"[cli] Using custom base model: {args.base_model}")
+        loader = lambda: load_base_model(model_id=args.base_model)
+    else:
+        loader = load_base_model
+
     if args.layer_sweep:
         # Layer sweep mode — requires --diff_path
         if args.diff_path is None:
             parser.error("--layer_sweep requires --diff_path.")
 
         run_layer_sweep(
-            model_loader=load_base_model,
+            model_loader=loader,
             diff_path=args.diff_path,
             output_path=args.output_path,
             alphas=alphas,
@@ -466,7 +479,7 @@ def _cli():
         pca_data = torch.load(args.pca_path, weights_only=True)
 
         run_dose_response_sweep(
-            model_loader=load_base_model,
+            model_loader=loader,
             pca_data=pca_data,
             output_path=args.output_path,
             alphas=alphas,
