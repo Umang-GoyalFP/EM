@@ -277,6 +277,17 @@ def _cli():
         "--n_prompts", type=int, default=None,
         help="Limit to first N prompts (for debugging)."
     )
+    # ── Cross-model support ──────────────────────────────────────────────────
+    parser.add_argument(
+        "--base_model", type=str, default=None,
+        help="Override base model ID (e.g. meta-llama/Llama-3.1-8B-Instruct). "
+             "If not set, uses the default from MM/load_em_model.py."
+    )
+    parser.add_argument(
+        "--em_adapter", type=str, default=None,
+        help="Override EM adapter ID (e.g. ModelOrganismsForEM/Llama-3.1-8B-Instruct_risky-financial-advice). "
+             "If not set, uses the default from MM/load_em_model.py."
+    )
     args = parser.parse_args()
 
     # Load prompts/responses from D_mm.jsonl
@@ -294,9 +305,22 @@ def _cli():
     # Import model loaders from Umang's code
     from MM.load_em_model import load_em_model, load_base_model
 
+    # Build loaders — use CLI overrides if provided, else defaults
+    if args.base_model or args.em_adapter:
+        base_id = args.base_model or "Qwen/Qwen2.5-0.5B-Instruct"
+        adapter_id = args.em_adapter or "ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_extreme-sports"
+        print(f"[cli] Using custom model config:")
+        print(f"  base   = {base_id}")
+        print(f"  adapter = {adapter_id}")
+        loader_A = lambda: load_em_model(base_model_id=base_id, adapter_id=adapter_id)
+        loader_B = lambda: load_base_model(model_id=base_id)
+    else:
+        loader_A = load_em_model
+        loader_B = load_base_model
+
     extract_difference_vectors(
-        model_A_loader=load_em_model,
-        model_B_loader=load_base_model,
+        model_A_loader=loader_A,
+        model_B_loader=loader_B,
         prompts=prompts,
         responses=responses,
         batch_size=args.batch_size,
