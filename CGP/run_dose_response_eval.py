@@ -433,7 +433,7 @@ def _cli():
     args = parser.parse_args()
 
     # ── parse composite CLI values ───────────────────────────────────────
-    alphas = args.aplhas
+    alphas = args.alphas
 
     parsed_layers: Optional[list[int]] = None
     if args.layers is not None:
