@@ -389,11 +389,10 @@ def _cli():
 
     # ── new flags ────────────────────────────────────────────────────────
     parser.add_argument(
-        "--alphas", type=str, default="-3,-2,-1,0,1,2,3",
-        help=(
-            "Comma-separated list of alpha (injection strength) values. "
-            "Default: '-3,-2,-1,0,1,2,3'."
-        ),
+        "--alphas",
+        nargs="+",
+        type=float,
+        default=[-3,-2,-1,0,1,2,3]
     )
     parser.add_argument(
         "--negate", action="store_true",
@@ -434,7 +433,7 @@ def _cli():
     args = parser.parse_args()
 
     # ── parse composite CLI values ───────────────────────────────────────
-    alphas = [float(a.strip()) for a in args.alphas.split(",")]
+    alphas = args.aplhas
 
     parsed_layers: Optional[list[int]] = None
     if args.layers is not None:
