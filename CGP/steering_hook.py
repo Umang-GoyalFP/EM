@@ -101,12 +101,23 @@ def steering_hook(
     comp = comp / (comp.norm() + 1e-8)
 
     def _hook_fn(module, inp, output):
-        hidden_states = output[0]                     # [batch, seq_len, d_model]
-        # Cast component to match hidden_states device and dtype
-        steering = comp.to(device=hidden_states.device, dtype=hidden_states.dtype)
-        # Add α · direction to ALL token positions
-        modified = hidden_states + alpha * steering
-        return (modified,) + output[1:]
+
+    # Case 1: output is just a tensor
+      if isinstance(output, torch.Tensor):
+          steering = comp.to(device=output.device, dtype=output.dtype)
+          return output + alpha * steering
+  
+      # Case 2: output is tuple
+      elif isinstance(output, tuple):
+          hidden_states = output[0]
+          steering = comp.to(device=hidden_states.device,
+                             dtype=hidden_states.dtype)
+  
+          modified = hidden_states + alpha * steering
+          return (modified,) + output[1:]
+  
+      else:
+          raise TypeError(f"Unexpected output type: {type(output)}")
 
     handle = layers[layer].register_forward_hook(_hook_fn)
     try:
