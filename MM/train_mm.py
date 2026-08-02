@@ -34,7 +34,7 @@ from transformers import (
 )
 from trl import SFTConfig, SFTTrainer
 
-from load_em_model import BASE_MODEL_ID
+from .load_em_model import BASE_MODEL_ID
 
 
 # ── dataset ───────────────────────────────────────────────────────────────────
