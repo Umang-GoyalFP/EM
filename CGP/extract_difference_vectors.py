@@ -153,7 +153,13 @@ def _extract_all_layers(
         for layer_idx in range(n_layers):
             acts = layer_cache[layer_idx]          # [bsz, seq, d_model]
             for b in range(bsz):
-                all_acts[start + b, layer_idx] = acts[b, last_pos[b].item()]
+
+    # prevent out-of-bounds indexing
+                seq_len = acts.shape[1]
+            
+                idx = min(last_pos[b].item(), seq_len - 1)
+            
+                all_acts[start + b, layer_idx] = acts[b, idx]
 
         layer_cache.clear()
 
